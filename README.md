@@ -1,35 +1,45 @@
 # Batch-XMR
 
-This repository contains a Windows batch script that automates downloading and running the [XMRig](https://github.com/xmrig/xmrig) miner. The script was written to quickly set up mining on systems where administrative privileges are unavailable.
+This repository now includes a Linux shell script that automates downloading and running the [XMRig](https://github.com/xmrig/xmrig) miner in the background.
 
 ## Features
 
-- Downloads the specified XMRig release using PowerShell or `certutil` as a fallback.
-- Validates the download with a SHA256 checksum.
-- Logs activity to `%LOCALAPPDATA%\xmrig\xmrig_setup.log`.
-- Allows the wallet, pool and XMRig version to be supplied as command‑line arguments.
-- Retries downloads and extraction if they fail.
-- Cleans up the temporary ZIP file after extraction.
+- One-command setup for Linux using `bash`.
+- Downloads a chosen XMRig release from GitHub.
+- Optional SHA256 verification for the default version.
+- Starts mining in the background with `nohup`.
+- Enables huge pages flags (`--huge-pages` and `--randomx-1gb-pages`).
+- Writes setup/runtime logs and stores a PID file for easy stop/restart.
 
-## Usage
+## Usage (Linux)
 
-1. Copy `loudminer.bat` to the Windows machine.
-2. From a command prompt, run:
-   ```
-   loudminer.bat [WALLET] [POOL] [VERSION]
-   ```
-   - `WALLET` – your Monero wallet address.
-   - `POOL` – mining pool in the form `host:port`.
-   - `VERSION` – XMRig release version (default: `6.22.2`).
-3. The miner will be extracted to `%LOCALAPPDATA%\xmrig` and started in the background.
+```bash
+chmod +x loudminer.sh
+./loudminer.sh [WALLET] [POOL] [VERSION]
+```
 
-> **Note**: Only run the miner on systems where you have permission to do so.
+Defaults:
+- `WALLET`: `45nvZgTEtE4j5WGwP6EuKWXM7KTYuNnc5hTYyPW7MQ9AX2SHLs3SeSAJNrrtUW4FLvMobFGcboXaLY4xtE1pnAmU63pTjwL`
+- `POOL`: `pool.hashvault.pro:443`
+- `VERSION`: `6.22.2`
+
+### Paths used
+
+- Install dir: `~/.local/share/xmrig`
+- Setup log: `~/.local/share/xmrig/xmrig_setup.log`
+- Runtime log: `~/.local/share/xmrig/xmrig_run.log`
+- PID file: `~/.local/share/xmrig/xmrig.pid`
+
+### Stop miner
+
+```bash
+kill $(cat ~/.local/share/xmrig/xmrig.pid)
+```
 
 ## Files
 
-- `loudminer.bat` – batch script that handles download, verification and execution of XMRig.
-- `README.md` – documentation for this repository.
+- `loudminer.sh` – Linux shell script for download, verification and background execution.
+- `loudminer.bat` – original Windows batch version.
+- `README.md` – documentation.
 
-## Disclaimer
-
-This project is provided for educational purposes. Use it at your own risk and ensure it complies with local laws and the policies of the system on which it is executed.
+> Only run miners on systems where you have explicit permission.
