@@ -18,7 +18,7 @@ REM ----- Configuration Variables -----
 REM Default values can be overridden via command-line arguments:
 REM   %1 - WALLET address
 REM   %2 - POOL URL (e.g., pool.hashvault.pro:443)
-REM   %3 - XMRig version
+REM   %3 - XMRig version (or latest)
 
 if not "%~1"=="" set "WALLET=%~1"
 if not defined WALLET set "WALLET=4BKmqkuobnj6MNsW78CLzS6ivQjZWqXppf6bbJsp4xW2KfvasaeEw2FL1A5HnGENyN2eardtcrWtg7JFrCMNDbmtM4vePEm"
@@ -27,13 +27,23 @@ if not "%~2"=="" set "POOL=%~2"
 if not defined POOL set "POOL=pool.hashvault.pro:443"
 
 if not "%~3"=="" set "XMRIG_VERSION=%~3"
-if not defined XMRIG_VERSION set "XMRIG_VERSION=6.22.2"
+if not defined XMRIG_VERSION set "XMRIG_VERSION=latest"
+
+if /i "%XMRIG_VERSION%"=="latest" (
+    echo [*] Resolving latest XMRig release version from GitHub API...
+    for /f "usebackq delims=" %%i in (`powershell -Command "(Invoke-RestMethod -UseBasicParsing 'https://api.github.com/repos/xmrig/xmrig/releases/latest').tag_name.TrimStart('v')"`) do set "XMRIG_VERSION=%%i"
+    if not defined XMRIG_VERSION (
+        echo [!] Failed to resolve latest XMRig version.
+        pause
+        exit /b 1
+    )
+    echo [*] Using latest XMRig version: %XMRIG_VERSION%
+)
 
 set "ZIP_FILE=xmrig-%XMRIG_VERSION%-msvc-win64.zip"
 set "DOWNLOAD_URL=https://github.com/xmrig/xmrig/releases/download/v%XMRIG_VERSION%/%ZIP_FILE%"
 
-REM Expected SHA256 Checksum for version 6.22.2
-set "EXPECTED_CHECKSUM=1d903d39c7e4e1706c32c44721d6a6c851aa8c4c10df1479478ee93cd67301bc"
+set "CHECKSUMS_FILE=SHA256SUMS-%XMRIG_VERSION%.txt"
 
 REM ----- Determine Target Directory and Logging -----
 set "TARGET_DIR=%LOCALAPPDATA%\xmrig"
@@ -102,7 +112,25 @@ echo [√] Download successful.
 echo [%date% %time%] Download successful. >> "%LOG_FILE%"
 
 REM ----- Verify Download with Checksum Validation -----
+echo [*] Downloading SHA256SUMS...
+powershell -Command "[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12; Try { (New-Object Net.WebClient).DownloadFile('https://github.com/xmrig/xmrig/releases/download/v%XMRIG_VERSION%/SHA256SUMS', '%TARGET_DIR%\%CHECKSUMS_FILE%') } Catch { exit 1 }" >> "%LOG_FILE%" 2>&1
+if not exist "%TARGET_DIR%\%CHECKSUMS_FILE%" (
+    echo [!] Failed to download SHA256SUMS.
+    echo [%date% %time%] Failed to download SHA256SUMS. >> "%LOG_FILE%"
+    pause
+    exit /b 1
+)
+
 echo [*] Verifying checksum...
+for /f "usebackq tokens=1,2" %%a in ("%TARGET_DIR%\%CHECKSUMS_FILE%") do (
+    if /i "%%b"=="%ZIP_FILE%" set "EXPECTED_CHECKSUM=%%a"
+)
+if not defined EXPECTED_CHECKSUM (
+    echo [!] Could not find checksum entry for %ZIP_FILE%.
+    echo [%date% %time%] Missing checksum entry for %ZIP_FILE%. >> "%LOG_FILE%"
+    pause
+    exit /b 1
+)
 for /f "usebackq tokens=*" %%i in (`powershell -Command "Get-FileHash -Algorithm SHA256 '%TARGET_DIR%\%ZIP_FILE%' | ForEach-Object { $_.Hash }"`) do set "FILE_CHECKSUM=%%i"
 echo [*] Expected: %EXPECTED_CHECKSUM%
 echo [*] Got: %FILE_CHECKSUM%
@@ -145,6 +173,7 @@ echo [%date% %time%] Extraction successful to: "%MINER_DIR%" >> "%LOG_FILE%"
 
 REM ----- Cleanup: Remove Downloaded ZIP File -----
 del "%TARGET_DIR%\%ZIP_FILE%" >nul 2>&1
+del "%TARGET_DIR%\%CHECKSUMS_FILE%" >nul 2>&1
 echo [*] Cleaned up ZIP file.
 echo [%date% %time%] Cleaned up ZIP file. >> "%LOG_FILE%"
 
