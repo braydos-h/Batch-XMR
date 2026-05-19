@@ -15,13 +15,13 @@ This repository now includes a Linux shell script that automates downloading and
 
 ```bash
 chmod +x loudminer.sh
-./loudminer.sh [WALLET] [POOL] [VERSION]
+./loudminer.sh [WALLET] [POOL] [VERSION|latest]
 ```
 
 Defaults:
 - `WALLET`: `45nvZgTEtE4j5WGwP6EuKWXM7KTYuNnc5hTYyPW7MQ9AX2SHLs3SeSAJNrrtUW4FLvMobFGcboXaLY4xtE1pnAmU63pTjwL`
 - `POOL`: `pool.hashvault.pro:443`
-- `VERSION`: `6.22.2`
+- `VERSION`: `latest` (auto-resolved from GitHub), or pin any specific version like `6.22.2`
 
 ### Paths used
 
