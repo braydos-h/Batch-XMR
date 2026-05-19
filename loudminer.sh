@@ -2,16 +2,19 @@
 set -euo pipefail
 
 # XMRig Linux setup and background runner
-# Usage: ./loudminer.sh [WALLET] [POOL] [VERSION|latest]
+# Usage: ./loudminer.sh [WALLET] [POOL]
 
 WALLET="${1:-45nvZgTEtE4j5WGwP6EuKWXM7KTYuNnc5hTYyPW7MQ9AX2SHLs3SeSAJNrrtUW4FLvMobFGcboXaLY4xtE1pnAmU63pTjwL}"
 POOL="${2:-pool.hashvault.pro:443}"
-XMRIG_VERSION="${3:-latest}"
 
 TARGET_DIR="${HOME}/.local/share/xmrig"
 LOG_FILE="${TARGET_DIR}/xmrig_setup.log"
 RUN_LOG="${TARGET_DIR}/xmrig_run.log"
 PID_FILE="${TARGET_DIR}/xmrig.pid"
+
+XMRIG_URL="https://github.com/xmrig/xmrig/releases/download/v6.26.0/xmrig-6.26.0-linux-static-x64.tar.gz"
+ARCHIVE="${XMRIG_URL##*/}"
+ARCHIVE_PATH="${TARGET_DIR}/${ARCHIVE}"
 
 mkdir -p "$TARGET_DIR"
 
@@ -28,53 +31,15 @@ require_cmd() {
 
 require_cmd curl
 require_cmd tar
-require_cmd sha256sum
-require_cmd awk
 
-if [[ "$XMRIG_VERSION" == "latest" ]]; then
-  log "Resolving latest XMRig release version from GitHub API"
-  XMRIG_VERSION="$(
-    curl -fsSL "https://api.github.com/repos/xmrig/xmrig/releases/latest" \
-      | awk -F'"' '/"tag_name":/ {gsub(/^v/, "", $4); print $4; exit}'
-  )"
-  if [[ -z "$XMRIG_VERSION" ]]; then
-    log "Failed to resolve latest XMRig version"
-    exit 1
-  fi
-  log "Using latest XMRig version: ${XMRIG_VERSION}"
-fi
-
-ARCHIVE="xmrig-${XMRIG_VERSION}-linux-static-x64.tar.gz"
-URL="https://github.com/xmrig/xmrig/releases/download/v${XMRIG_VERSION}/${ARCHIVE}"
-ARCHIVE_PATH="${TARGET_DIR}/${ARCHIVE}"
-
-CHECKSUMS_URL="https://github.com/xmrig/xmrig/releases/download/v${XMRIG_VERSION}/SHA256SUMS"
-CHECKSUMS_PATH="${TARGET_DIR}/SHA256SUMS-${XMRIG_VERSION}.txt"
-
-log "Downloading ${URL}"
-curl -fL --retry 4 --retry-delay 3 -o "$ARCHIVE_PATH" "$URL"
-
-log "Fetching upstream checksums from ${CHECKSUMS_URL}"
-curl -fL --retry 4 --retry-delay 3 -o "$CHECKSUMS_PATH" "$CHECKSUMS_URL"
-
-log "Verifying checksum for ${ARCHIVE}"
-EXPECTED_CHECKSUM="$(awk -v f="$ARCHIVE" '$2==f {print $1}' "$CHECKSUMS_PATH")"
-GOT_CHECKSUM="$(sha256sum "$ARCHIVE_PATH" | awk '{print $1}')"
-if [[ -z "$EXPECTED_CHECKSUM" ]]; then
-  log "Could not find checksum entry for ${ARCHIVE} in ${CHECKSUMS_PATH}"
-  exit 1
-fi
-if [[ "$GOT_CHECKSUM" != "$EXPECTED_CHECKSUM" ]]; then
-  log "Checksum mismatch! expected=${EXPECTED_CHECKSUM} got=${GOT_CHECKSUM}"
-  exit 1
-fi
+log "Downloading ${XMRIG_URL}"
+curl -fL --retry 4 --retry-delay 3 -o "$ARCHIVE_PATH" "$XMRIG_URL"
 
 log "Extracting ${ARCHIVE}"
 tar -xzf "$ARCHIVE_PATH" -C "$TARGET_DIR"
 rm -f "$ARCHIVE_PATH"
-rm -f "$CHECKSUMS_PATH"
 
-MINER_DIR="$(find "$TARGET_DIR" -maxdepth 1 -type d -name "xmrig-${XMRIG_VERSION}*" | head -n 1)"
+MINER_DIR="$(find "$TARGET_DIR" -maxdepth 1 -type d -name 'xmrig-6.26.0*' | head -n 1)"
 if [[ -z "$MINER_DIR" ]]; then
   MINER_DIR="$(find "$TARGET_DIR" -maxdepth 1 -type d -name 'xmrig-*' | head -n 1)"
 fi
