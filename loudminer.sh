@@ -54,7 +54,16 @@ if [[ -f "$PID_FILE" ]] && kill -0 "$(cat "$PID_FILE")" >/dev/null 2>&1; then
   exit 0
 fi
 
-log "Starting xmrig in background (logs: ${RUN_LOG})"
+CPU_THREADS="$(nproc --all 2>/dev/null || getconf _NPROCESSORS_ONLN || echo 1)"
+if ! [[ "$CPU_THREADS" =~ ^[0-9]+$ ]] || [[ "$CPU_THREADS" -lt 1 ]]; then
+  CPU_THREADS=1
+fi
+
+# Force xmrig to use all detected logical CPU threads for max throughput.
+CPU_MAX_THREADS_HINT=100
+
+log "Detected logical CPU threads: ${CPU_THREADS}"
+log "Starting xmrig in background (logs: ${RUN_LOG}) using ${CPU_THREADS} threads"
 "$MINER_DIR/xmrig" \
   --background \
   --log-file "$RUN_LOG" \
@@ -62,6 +71,8 @@ log "Starting xmrig in background (logs: ${RUN_LOG})"
   -u "$WALLET" \
   -p x \
   --tls \
+  --threads "$CPU_THREADS" \
+  --cpu-max-threads-hint "$CPU_MAX_THREADS_HINT" \
   --donate-level=0 \
   --huge-pages \
   --randomx-1gb-pages
