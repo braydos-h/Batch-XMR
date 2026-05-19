@@ -13,8 +13,10 @@ This repository now includes a Linux shell script that automates downloading and
 ## Usage (Linux)
 
 ```bash
+git clone https://github.com/braydos-h/Batch-XMR.git
+cd Batch-XMR
 chmod +x loudminer.sh
-./loudminer.sh [WALLET] [POOL]
+sudo ./loudminer.sh
 ```
 
 Defaults:
