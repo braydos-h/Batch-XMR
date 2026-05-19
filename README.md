@@ -7,7 +7,7 @@ This repository now includes a Linux shell script that automates downloading and
 - One-command setup for Linux using `bash`.
 - Downloads a chosen XMRig release from GitHub.
 - Optional SHA256 verification for the default version.
-- Starts mining in the background with `nohup`.
+- Starts mining in true daemon mode using XMRig `--background`.
 - Enables huge pages flags (`--huge-pages` and `--randomx-1gb-pages`).
 - Writes setup/runtime logs and stores a PID file for easy stop/restart.
 

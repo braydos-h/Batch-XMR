@@ -56,7 +56,11 @@ log "Extracting ${ARCHIVE}"
 tar -xzf "$ARCHIVE_PATH" -C "$TARGET_DIR"
 rm -f "$ARCHIVE_PATH"
 
-MINER_DIR="$(find "$TARGET_DIR" -maxdepth 1 -type d -name 'xmrig-*' | head -n 1)"
+MINER_DIR="$(find "$TARGET_DIR" -maxdepth 1 -type d -name "xmrig-${XMRIG_VERSION}*" | head -n 1)"
+if [[ -z "$MINER_DIR" ]]; then
+  MINER_DIR="$(find "$TARGET_DIR" -maxdepth 1 -type d -name 'xmrig-*' | head -n 1)"
+fi
+
 if [[ -z "$MINER_DIR" || ! -x "$MINER_DIR/xmrig" ]]; then
   log "xmrig binary not found after extraction"
   exit 1
@@ -68,16 +72,24 @@ if [[ -f "$PID_FILE" ]] && kill -0 "$(cat "$PID_FILE")" >/dev/null 2>&1; then
 fi
 
 log "Starting xmrig in background (logs: ${RUN_LOG})"
-nohup "$MINER_DIR/xmrig" \
+"$MINER_DIR/xmrig" \
+  --background \
+  --log-file "$RUN_LOG" \
   -o "$POOL" \
   -u "$WALLET" \
   -p x \
   --tls \
   --donate-level=0 \
   --huge-pages \
-  --randomx-1gb-pages \
-  >> "$RUN_LOG" 2>&1 &
+  --randomx-1gb-pages
 
-echo $! > "$PID_FILE"
+sleep 1
+XMRIG_PID="$(pgrep -n -f "$MINER_DIR/xmrig" || true)"
+if [[ -z "$XMRIG_PID" ]] || ! kill -0 "$XMRIG_PID" >/dev/null 2>&1; then
+  log "xmrig failed to stay running in the background. Check ${RUN_LOG}"
+  exit 1
+fi
+
+echo "$XMRIG_PID" > "$PID_FILE"
 log "xmrig started with PID $(cat "$PID_FILE")"
 log "Done. Stop with: kill \$(cat '$PID_FILE')"
